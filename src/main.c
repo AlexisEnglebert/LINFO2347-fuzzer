@@ -1,8 +1,11 @@
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
+
 #include "help.h"
 
 void help() {
-    fprintf(stderr, "Usage: fuzzer path\n");
+    fprintf(stderr, "Usage: ./fuzzer cmd\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -17,10 +20,11 @@ int main(int argc, char* argv[]) {
     cmd[26] = '\0';
     strncat(cmd, " archive.tar", 25);
     char buf[33];
-    FILE *fp;
 
-    if ((fp = popen(cmd, "r")) == NULL) {
-        printf("Error opening pipe!\n");
+    FILE *fp = fp = popen(cmd, "r");
+    
+    if (fp == NULL) {
+        printf("Error opening pipe: %s\n", strerror(errno));
         return -1;
     }
 
@@ -28,6 +32,7 @@ int main(int argc, char* argv[]) {
         printf("No output\n");
         goto finally;
     }
+
     if(strncmp(buf, "*** The program has crashed ***\n", 33)) {
         printf("Not the crash message\n");
         goto finally;
@@ -38,7 +43,7 @@ int main(int argc, char* argv[]) {
     }
 finally:
     if(pclose(fp) == -1) {
-        fprintf(stderr, "Error: Command not found\n");
+        fprintf(stderr, "Error closing pipe: %s\n", strerror(errno));
         rv = -1;
     }
     
