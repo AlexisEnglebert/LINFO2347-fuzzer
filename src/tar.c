@@ -1,4 +1,4 @@
-#include "help.h"
+#include "tar.h"
 
 /**
  * Computes the checksum for a tar header and encode it on the header
@@ -22,4 +22,10 @@ unsigned int calculate_checksum(tar_t* entry) {
     entry->chksum[6] = '\0';
     entry->chksum[7] = ' ';
     return check;
+}
+
+int write_tar(tar_t* data) {
+    // TODO ...
+
+    return 0;
 }

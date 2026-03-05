@@ -26,3 +26,4 @@ typedef struct tar_struct
 
 
 unsigned int calculate_checksum(tar_t* entry);
+int write_tar(tar_t* data);
