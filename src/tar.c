@@ -25,7 +25,7 @@ unsigned int calculate_checksum(tar_t* entry) {
 }
 
 int write_tar(tar_t* data) {
+    (void) data;
     // TODO ...
-
     return 0;
 }

@@ -41,6 +41,8 @@ close_pipe:
 }
 
 int generate_inputs(const char* path) {
+    (void)path;
+    
     tar_t candidate;
     // TODO ....
     write_tar(&candidate);
