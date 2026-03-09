@@ -40,10 +40,19 @@ close_pipe:
     
 }
 
+int permute_name(tar_t* a) {
+    write_tar(a);
+    execute_extractor("");
+    
+    return 0;
+}
+
 int generate_inputs(const char* path) {
     (void)path;
     
     tar_t candidate;
+
+    int_valid_tar(&candidate);
     // TODO ....
     write_tar(&candidate);
 

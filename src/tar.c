@@ -24,8 +24,20 @@ unsigned int calculate_checksum(tar_t* entry) {
     return check;
 }
 
+
+int int_valid_tar(tar_t* tar) {
+    strcpy(tar->magic, "ustar");
+    
+    return 0;
+}
+
 int write_tar(tar_t* data) {
-    (void) data;
-    // TODO ...
+
+    FILE* fd = fopen("archive.tar", "w");
+    size_t res = fwrite(data, sizeof(tar_t), 1, fd);
+    
+    if (res == 0) {
+        return -1;
+    }
     return 0;
 }
