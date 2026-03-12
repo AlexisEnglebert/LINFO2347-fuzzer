@@ -1,12 +1,15 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "generator.h"
+
 
 void help() {
     fprintf(stderr, "Usage: ./fuzzer extractor\n");
 }
 
+char* command = NULL;
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -14,11 +17,12 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    char cmd[51];
-    strncpy(cmd, argv[1], 25);
-    cmd[26] = '\0';
+    command = calloc(51, sizeof(*command));
     
-    int ret = generate_inputs(cmd);
+    strncpy(command, argv[1], 25);
+    command[26] = '\0';
+    
+    int ret = generate_inputs();
     
     return ret;
 }
