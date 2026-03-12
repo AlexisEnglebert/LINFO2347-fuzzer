@@ -50,7 +50,7 @@ int permute_name(tar_t* a) {
 int generate_inputs(const char* path) {
     (void)path;
     
-    tar_t candidate;
+    tar_t candidate = {0};
 
     int_valid_tar(&candidate);
     // TODO ....
