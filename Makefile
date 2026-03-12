@@ -1,5 +1,5 @@
 CC      := gcc
-CFLAGS  := -Wall -Wextra -Werror -std=gnu99 -Isrc
+CFLAGS  := -Wall -Wextra -Werror -std=gnu99 -Isrc -g
 
 TARGET  := app
 SRC_DIR := src

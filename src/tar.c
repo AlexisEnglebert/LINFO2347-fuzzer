@@ -1,4 +1,5 @@
 #include "tar.h"
+#include <errno.h>
 
 /**
  * Computes the checksum for a tar header and encode it on the header
@@ -28,23 +29,31 @@ unsigned int calculate_checksum(tar_t* entry) {
 int init_valid_tar(tar_t* tar) {
 
     strcpy(tar->magic, "ustar");
-
     strcpy(tar->name, "test");
-
     strcpy(tar->version, "00");
-
     calculate_checksum(tar);
 
     return 0;
 }
 
 int write_tar(tar_t* data) {
-
+    char total[100] = {0};
     FILE* fd = fopen("archive.tar", "w");
-    size_t res = fwrite(data, sizeof(tar_t), 1, fd);
-    
-    if (res == 0) {
-        return -1;
+
+    if (fd == NULL) {
+        fprintf(stderr, "Error while creating %s: %s\n", total, strerror(errno));
+        return - 1;
     }
-    return 0;
+
+    int res = fwrite(data, sizeof(tar_t), 1, fd);
+    int rv = 0; 
+    if (res == 0) {
+        rv = -1;
+    }
+
+    res = fclose(fd);
+    if (res == -1) {
+        rv = -1;
+    }
+    return rv;
 }
