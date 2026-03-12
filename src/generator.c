@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "generator.h"
 #include "tar.h"
@@ -28,7 +29,7 @@ int execute_extractor(const char* command_prefix) {
     }
 
     if(strncmp(program_output, "*** The program has crashed ***\n", 33)) {
-        printf("program crahsed !!!");
+        printf("---------- FOUND A BUG --------------\n");
         goto close_pipe;
     } else {
         return_value = -1;
@@ -43,7 +44,6 @@ close_pipe:
     }
 
     return return_value;
-    
 }
 
 
@@ -69,10 +69,15 @@ int fuzz_name(tar_t* tar) {
             tar->name[pos] = ascii_char;
             calculate_checksum(tar);
             write_tar(tar);
-            execute_extractor("../");
+            if (execute_extractor("../") == 0) {
+
+            }
             tar->name[pos] = 'a';
         }
     }
+
+    chdir("../");
+    system("rm -rf trash");
     printf("finished\n");
     
     return 0;
