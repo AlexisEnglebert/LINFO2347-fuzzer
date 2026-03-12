@@ -8,6 +8,16 @@
 #include "generator.h"
 #include "tar.h"
 
+
+int run_test(tar_t* a, const char* command_prefix) {
+    //runs the test and compute the checksum for the tar header 
+    calculate_checksum(a);
+    write_tar(a);
+    execute_extractor(command_prefix);
+    
+    return 0;
+}
+
 int execute_extractor(const char* command_prefix) {
     char executable[100];
     
@@ -82,11 +92,51 @@ int fuzz_name(tar_t* tar) {
     
     return 0;
 }
+int fuzz_8bits(tar_t* a, char* field) {
+    //testing negative number : 
+    strcpy(field, "-1234567");
+    run_test(a, "");
 
+    //testing not number 
+    strcpy(field, "abcdefg");
+    run_test(a, "");
+
+    //embeded null : 
+    memcpy(field, "A\0AAAAA", 8);
+    run_test(a, "");
+
+    //not null terminated :
+    memset(field, 'A', 8);
+    run_test(a, "");
+    memcpy(field, "   644  ", 8);
+    run_test(a, "");
+
+    //All spaces
+    memset(field, ' ', 8);
+    run_test(a, "");
+
+    memcpy(field, "8888888", 8);
+    run_test(a, "");
+
+    for (int pos = 0; pos < 8; pos++) {
+        for (int c = 0; c < 256; c++) {
+            memcpy(field, "0000755", 8); // baseline
+            field[pos] = c;
+
+            run_test(a, "");
+        }
+    }
+    return 0;
+}
 int generate_inputs() {
     
     tar_t candidate = {0};
     init_valid_tar(&candidate);
+
+    fuzz_8bits(&candidate, candidate.mode);
+    fuzz_8bits(&candidate, candidate.uid);
+    fuzz_8bits(&candidate, candidate.gid);
+
     fuzz_name(&candidate);
     
 
