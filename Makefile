@@ -8,12 +8,11 @@ SRCS := $(wildcard $(SRC_DIR)/*.c)
 
 .PHONY: all clean fclean re
 
-all: fuzzer
+all: fclean fuzzer
 
 fuzzer: $(SRCS)
 	$(CC) $(CFLAGS) $(SRCS) -o $@
-clean:
-	@true
+
 
 fclean:
 	rm -f fuzzer
