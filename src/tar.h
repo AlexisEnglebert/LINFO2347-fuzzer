@@ -25,6 +25,6 @@ typedef struct tar_struct
 } tar_t;
 
 
-int int_valid_tar(tar_t* tar);
+int init_valid_tar(tar_t* tar);
 unsigned int calculate_checksum(tar_t* entry);
 int write_tar(tar_t* data);

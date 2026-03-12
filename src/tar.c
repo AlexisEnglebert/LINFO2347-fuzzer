@@ -25,7 +25,7 @@ unsigned int calculate_checksum(tar_t* entry) {
 }
 
 
-int int_valid_tar(tar_t* tar) {
+int init_valid_tar(tar_t* tar) {
     strcpy(tar->magic, "ustar");
     
     return 0;
