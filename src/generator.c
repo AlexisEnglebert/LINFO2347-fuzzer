@@ -52,7 +52,7 @@ int generate_inputs(const char* path) {
     
     tar_t candidate = {0};
 
-    int_valid_tar(&candidate);
+    init_valid_tar(&candidate);
     // TODO ....
     write_tar(&candidate);
 
