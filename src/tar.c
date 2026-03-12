@@ -26,10 +26,15 @@ unsigned int calculate_checksum(tar_t* entry) {
 
 
 int init_valid_tar(tar_t* tar) {
+
     strcpy(tar->magic, "ustar");
-    tar->magic[6] = 48; 
-    tar->magic[7] = 48; 
-    
+
+    strcpy(tar->name, "test");
+
+    strcpy(tar->version, "00");
+
+    calculate_checksum(tar);
+
     return 0;
 }
 
