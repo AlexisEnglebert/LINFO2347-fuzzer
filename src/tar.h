@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
-
+//devmajor, devminor, prefix or padding
 typedef struct tar_struct
 {                              /* byte offset */
     char name[100];               /*   0 */
@@ -25,6 +25,9 @@ typedef struct tar_struct
 } tar_t;
 
 
+extern int sucess_cnt;
+
 int init_valid_tar(tar_t* tar);
 unsigned int calculate_checksum(tar_t* entry);
-int write_tar(tar_t* data);
+int write_tar(tar_t* data, const char* folder);
+int save_sucess_tar(tar_t* tar);

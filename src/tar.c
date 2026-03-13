@@ -1,5 +1,8 @@
 #include "tar.h"
 #include <errno.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
 
 /**
  * Computes the checksum for a tar header and encode it on the header
@@ -36,12 +39,11 @@ int init_valid_tar(tar_t* tar) {
     return 0;
 }
 
-int write_tar(tar_t* data) {
-    char total[100] = {0};
-    FILE* fd = fopen("archive.tar", "w");
+int write_tar(tar_t* data, const char* filename) {
+    FILE* fd = fopen(filename, "w");
 
     if (fd == NULL) {
-        fprintf(stderr, "Error while creating %s: %s\n", total, strerror(errno));
+        fprintf(stderr, "Error while creating %s: %s\n", filename, strerror(errno));
         return - 1;
     }
 
@@ -56,4 +58,18 @@ int write_tar(tar_t* data) {
         rv = -1;
     }
     return rv;
+}
+
+int sucess_cnt = 0;
+
+int save_sucess_tar(tar_t* tar) {
+    opendir("sucess");
+    if (ENOENT == errno) {
+        mkdir("sucess", 0777);
+    }
+    char filename[100];
+    sprintf(filename, "%s%d%s", "sucess_", sucess_cnt, "archive.tar");
+    sucess_cnt++;
+    write_tar(tar, filename);
+    return 0;
 }

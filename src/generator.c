@@ -11,12 +11,13 @@
 #include "tar.h"
 
 
-int run_test(tar_t* a, const char* command_prefix) {
+int run_test(tar_t* tar, const char* command_prefix) {
     //runs the test and compute the checksum for the tar header 
-    calculate_checksum(a);
-    write_tar(a);
-    (void) command_prefix;
-    execute_extractor(command_prefix);
+    calculate_checksum(tar);
+    write_tar(tar, "archive.tar");
+    if (execute_extractor(command_prefix) == 0) {
+        save_sucess_tar(tar);
+    }
     
     return 0;
 }
@@ -94,10 +95,10 @@ int fuzz_name(tar_t* tar) {
  
     for(int pos = 0; pos < 99; pos++){
         for(size_t ascii_char = 1; ascii_char <= 255; ascii_char++) {
-            if(ascii_char == '/') continue; // On ignore le / de ses mort
+            //if(ascii_char == '/') continue; // On ignore le / de ses mort
             tar->name[pos] = ascii_char;
             calculate_checksum(tar);
-            write_tar(tar);
+            write_tar(tar, "archive.tar");
             if (execute_extractor("../") == 0) {
 
             }
@@ -148,15 +149,24 @@ int fuzz_8bits(tar_t* a, char* field) {
     return 0;
 }
 
+void fuzz_time(tar_t* tar) {
+    strcpy(tar->mtime, "-1");
+    run_test(tar, "");
+}
 int generate_inputs() {
     
     tar_t candidate = {0};
     init_valid_tar(&candidate);
+    
+    fuzz_time(&candidate);
+
     fuzz_name(&candidate);
+    exit(0);
 
     fuzz_8bits(&candidate, candidate.mode);
     fuzz_8bits(&candidate, candidate.uid);
     fuzz_8bits(&candidate, candidate.gid);
+
 
     
 
