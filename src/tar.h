@@ -18,9 +18,9 @@ typedef struct tar_struct
     char version[2];              /* 263 */
     char uname[32];               /* 265 */
     char gname[32];               /* 297 */
-    char devmajor[8];             /* 329 */
-    char devminor[8];             /* 337 */
-    char prefix[155];             /* 345 */
+    char devmajor[8];             /* 329 - Balek*/
+    char devminor[8];             /* 337 - Balek*/
+    char prefix[155];             /* 345  - Balek*/
     char padding[12];             /* 500 */
 } tar_t;
 

@@ -32,9 +32,13 @@ unsigned int calculate_checksum(tar_t* entry) {
 
 int init_valid_tar(tar_t* tar) {
 
+    memset(tar, 0, sizeof(*tar));
+    
     strcpy(tar->magic, "ustar");
     strcpy(tar->name, "test");
+
     strcpy(tar->version, "00");
+    strcpy(tar->size, "66666666666"); // TODO: changer dans le write_tar pour les block de donnés, ici c'est temporaire.
     calculate_checksum(tar);
 
     return 0;
@@ -77,7 +81,7 @@ int save_sucess_tar(tar_t* tar) {
         mkdir("sucess", 0777);
     }
     char filename[100];
-    sprintf(filename, "%s%d%s", "sucess_", sucess_cnt, "archive.tar");
+    sprintf(filename, "%s%d%s", "sucess_", sucess_cnt, "_archive.tar");
     sucess_cnt++;
     write_tar(tar, filename);
     return 0;

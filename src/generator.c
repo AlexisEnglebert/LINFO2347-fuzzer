@@ -189,30 +189,34 @@ void fuzz_size_with_empty_file(tar_t* tar) {
         for(int val = '1'; val < '7'; val++) {
             tar->size[pos] = val;
             run_test(tar, "");
-            exit(1);
         }
     }
+    strcpy(tar->size, "000000000000");
 }
 
 int generate_inputs() {
     
     tar_t candidate = {0};
     init_valid_tar(&candidate);
-    
     fuzz_size_with_empty_file(&candidate);
-    fuzz_time(&candidate);
-    fuzz_typeflag(&candidate);
-    exit(0);
 
+    init_valid_tar(&candidate);
+    fuzz_time(&candidate);
+        
+    init_valid_tar(&candidate);
+    fuzz_typeflag(&candidate);
+    
+    init_valid_tar(&candidate);
     fuzz_name(&candidate);
 
+    init_valid_tar(&candidate);
     fuzz_8bits(&candidate, candidate.mode);
-    fuzz_8bits(&candidate, candidate.uid);
-    fuzz_8bits(&candidate, candidate.gid);
-
-
     
-
+    init_valid_tar(&candidate);
+    fuzz_8bits(&candidate, candidate.uid);
+    
+    init_valid_tar(&candidate);
+    fuzz_8bits(&candidate, candidate.gid);
 
     return 0;
 }
