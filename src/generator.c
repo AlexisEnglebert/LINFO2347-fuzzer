@@ -150,18 +150,61 @@ int fuzz_8bits(tar_t* a, char* field) {
 }
 
 void fuzz_time(tar_t* tar) {
-    strcpy(tar->mtime, "-1");
-    run_test(tar, "");
+    for(int i = 0; i < 8; i++) {
+        for(int val = '1'; val <= '7'; val++) {
+            tar->mtime[i] = val;
+            run_test(tar, "");
+        }
+    }
 }
+
+
+void fuzz_typeflag(tar_t* tar) {
+    tar->typeflag = '1';
+    run_test(tar, "");
+    tar->typeflag = '2';
+    run_test(tar, "");
+    tar->typeflag = '3';
+    run_test(tar, "");
+    tar->typeflag = '4';
+    run_test(tar, "");
+    tar->typeflag = '5';
+    run_test(tar, "");
+    tar->typeflag = '7';
+    run_test(tar, "");
+    tar->typeflag = 'g';
+    run_test(tar, "");
+    tar->typeflag = 'x';
+    run_test(tar, "");
+
+    for(int i = 65; i < 65+26; i++) {
+        tar->typeflag = i;
+        run_test(tar, "");
+    }
+}
+
+void fuzz_size_with_empty_file(tar_t* tar) {
+
+    for(int pos = 0; pos < 11; pos++) {
+        for(int val = '1'; val < '7'; val++) {
+            tar->size[pos] = val;
+            run_test(tar, "");
+            exit(1);
+        }
+    }
+}
+
 int generate_inputs() {
     
     tar_t candidate = {0};
     init_valid_tar(&candidate);
     
+    fuzz_size_with_empty_file(&candidate);
     fuzz_time(&candidate);
+    fuzz_typeflag(&candidate);
+    exit(0);
 
     fuzz_name(&candidate);
-    exit(0);
 
     fuzz_8bits(&candidate, candidate.mode);
     fuzz_8bits(&candidate, candidate.uid);

@@ -1,6 +1,7 @@
 #include "tar.h"
 #include <errno.h>
 #include <dirent.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
 
@@ -52,7 +53,15 @@ int write_tar(tar_t* data, const char* filename) {
     if (res == 0) {
         rv = -1;
     }
+    
+    char data2[100];
+    memset(&data2, 'a', 100);
+    fwrite(&data2, sizeof(char), 100, fd);
 
+    char end_block[1024];
+    memset(&end_block, 0, 1024);
+    fwrite(&end_block, sizeof(char), 1024, fd);
+    
     res = fclose(fd);
     if (res == -1) {
         rv = -1;
