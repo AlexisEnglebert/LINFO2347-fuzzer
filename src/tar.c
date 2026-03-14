@@ -38,19 +38,22 @@ int init_valid_tar(tar_t* tar) {
     strcpy(tar->name, "test");
 
     strcpy(tar->version, "00");
-    strcpy(tar->size, "66666666666"); // TODO: changer dans le write_tar pour les block de donnés, ici c'est temporaire.
     calculate_checksum(tar);
 
     return 0;
 }
 
-int write_tar(tar_t* data, const char* filename) {
-    FILE* fd = fopen(filename, "w");
+int write_tar(tar_t* data, const char* filename, const char *content, size_t data_size) {
+    //careful that data_size is only used for the content, header must previously be correctly initialized
+    //this is done bc we need to fuzz size soooooo you get it.
+    FILE* fd = fopen(filename, "wb");
 
     if (fd == NULL) {
         fprintf(stderr, "Error while creating %s: %s\n", filename, strerror(errno));
         return - 1;
     }
+
+
 
     int res = fwrite(data, sizeof(tar_t), 1, fd);
     int rv = 0; 
@@ -58,9 +61,7 @@ int write_tar(tar_t* data, const char* filename) {
         rv = -1;
     }
     
-    char data2[100];
-    memset(&data2, 'a', 100);
-    fwrite(&data2, sizeof(char), 100, fd);
+    fwrite(content, sizeof(char), data_size, fd);
 
     char end_block[1024];
     memset(&end_block, 0, 1024);
@@ -75,7 +76,7 @@ int write_tar(tar_t* data, const char* filename) {
 
 int sucess_cnt = 0;
 
-int save_sucess_tar(tar_t* tar) {
+int save_sucess_tar(tar_t* tar, const char* content, size_t data_size) {
     opendir("sucess");
     if (ENOENT == errno) {
         mkdir("sucess", 0777);
@@ -83,6 +84,6 @@ int save_sucess_tar(tar_t* tar) {
     char filename[100];
     sprintf(filename, "%s%d%s", "sucess_", sucess_cnt, "_archive.tar");
     sucess_cnt++;
-    write_tar(tar, filename);
+    write_tar(tar, filename, content, data_size);
     return 0;
 }

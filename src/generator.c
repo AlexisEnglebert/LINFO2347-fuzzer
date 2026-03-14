@@ -11,12 +11,13 @@
 #include "tar.h"
 
 
-int run_test(tar_t* tar, const char* command_prefix) {
+int run_test(tar_t* tar, const char* command_prefix, const char* content, size_t data_size) {
     //runs the test and compute the checksum for the tar header 
     calculate_checksum(tar);
-    write_tar(tar, "archive.tar");
+    write_tar(tar, "archive.tar", content, data_size);
+
     if (execute_extractor(command_prefix) == 0) {
-        save_sucess_tar(tar);
+        save_sucess_tar(tar, content, data_size);
     }
     
     return 0;
@@ -95,10 +96,10 @@ int fuzz_name(tar_t* tar) {
  
     for(int pos = 0; pos < 99; pos++){
         for(size_t ascii_char = 1; ascii_char <= 255; ascii_char++) {
-            //if(ascii_char == '/') continue; // On ignore le / de ses mort
+            if(ascii_char == '/') continue; // On ignore le / de ses mort
             tar->name[pos] = ascii_char;
             calculate_checksum(tar);
-            write_tar(tar, "archive.tar");
+            write_tar(tar, "archive.tar", "", 0);
             if (execute_extractor("../") == 0) {
 
             }
@@ -112,38 +113,38 @@ int fuzz_name(tar_t* tar) {
     
     return 0;
 }
-int fuzz_8bits(tar_t* a, char* field) {
+int fuzz_mode(tar_t* a) {
     //testing negative number : 
-    strcpy(field, "-1234567");
-    run_test(a, "");
+    strcpy(a->mode, "-1234567");
+    run_test(a, "", "", 0);
 
     //testing not number 
-    strcpy(field, "abcdefg");
-    run_test(a, "");
+    strcpy(a->mode, "abcdefg");
+    run_test(a, "", "", 0);
 
     //embeded null : 
-    memcpy(field, "A\0AAAAA", 8);
-    run_test(a, "");
+    memcpy(a->mode, "A\0AAAAA", 8);
+    run_test(a, "", "", 0);
 
     //not null terminated :
-    memset(field, 'A', 8);
-    run_test(a, "");
-    memcpy(field, "   644  ", 8);
-    run_test(a, "");
+    memset(a->mode, 'A', 8);
+    run_test(a, "", "", 0);
+    memcpy(a->mode, "   644  ", 8);
+    run_test(a, "", "", 0);
 
     //All spaces
-    memset(field, ' ', 8);
-    run_test(a, "");
+    memset(a->mode, ' ', 8);
+    run_test(a, "", "", 0);
 
-    memcpy(field, "8888888", 8);
-    run_test(a, "");
+    memcpy(a->mode, "8888888", 8);
+    run_test(a, "", "", 0);
 
     for (int pos = 0; pos < 8; pos++) {
         for (int c = 0; c < 256; c++) {
-            memcpy(field, "0000755", 8); // baseline
-            field[pos] = c;
+            memcpy(a->mode, "0000755", 8); // baseline
+            a->mode[pos] = c;
 
-            run_test(a, "");
+            run_test(a, "", "", 0);
         }
     }
     return 0;
@@ -153,7 +154,7 @@ void fuzz_time(tar_t* tar) {
     for(int i = 0; i < 8; i++) {
         for(int val = '1'; val <= '7'; val++) {
             tar->mtime[i] = val;
-            run_test(tar, "");
+            run_test(tar, "", "", 0);
         }
     }
 }
@@ -161,25 +162,25 @@ void fuzz_time(tar_t* tar) {
 
 void fuzz_typeflag(tar_t* tar) {
     tar->typeflag = '1';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
     tar->typeflag = '2';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
     tar->typeflag = '3';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
     tar->typeflag = '4';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
     tar->typeflag = '5';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
     tar->typeflag = '7';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
     tar->typeflag = 'g';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
     tar->typeflag = 'x';
-    run_test(tar, "");
+    run_test(tar, "", "", 0);
 
     for(int i = 65; i < 65+26; i++) {
         tar->typeflag = i;
-        run_test(tar, "");
+        run_test(tar, "", "", 0);
     }
 }
 
@@ -188,7 +189,7 @@ void fuzz_size_with_empty_file(tar_t* tar) {
     for(int pos = 0; pos < 11; pos++) {
         for(int val = '1'; val < '7'; val++) {
             tar->size[pos] = val;
-            run_test(tar, "");
+            run_test(tar, "", "", 0);
         }
     }
     strcpy(tar->size, "000000000000");
@@ -203,20 +204,14 @@ int generate_inputs() {
     init_valid_tar(&candidate);
     fuzz_time(&candidate);
         
-    init_valid_tar(&candidate);
-    fuzz_typeflag(&candidate);
+    // init_valid_tar(&candidate);
+    // fuzz_typeflag(&candidate);
     
     init_valid_tar(&candidate);
     fuzz_name(&candidate);
 
     init_valid_tar(&candidate);
-    fuzz_8bits(&candidate, candidate.mode);
-    
-    init_valid_tar(&candidate);
-    fuzz_8bits(&candidate, candidate.uid);
-    
-    init_valid_tar(&candidate);
-    fuzz_8bits(&candidate, candidate.gid);
+    fuzz_mode(&candidate);
 
     return 0;
 }

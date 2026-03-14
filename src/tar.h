@@ -29,5 +29,5 @@ extern int sucess_cnt;
 
 int init_valid_tar(tar_t* tar);
 unsigned int calculate_checksum(tar_t* entry);
-int write_tar(tar_t* data, const char* folder);
-int save_sucess_tar(tar_t* tar);
+int write_tar(tar_t* data, const char* folder, const char *content, size_t data_size);
+int save_sucess_tar(tar_t* tar, const char* content, size_t data_size);
