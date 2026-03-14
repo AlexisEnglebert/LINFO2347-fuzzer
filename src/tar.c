@@ -46,14 +46,12 @@ int init_valid_tar(tar_t* tar) {
 int write_tar(tar_t* data, const char* filename, const char *content, size_t data_size) {
     //careful that data_size is only used for the content, header must previously be correctly initialized
     //this is done bc we need to fuzz size soooooo you get it.
-    FILE* fd = fopen(filename, "wb");
+    FILE* fd = fopen(filename, "w");
 
     if (fd == NULL) {
         fprintf(stderr, "Error while creating %s: %s\n", filename, strerror(errno));
         return - 1;
     }
-
-
 
     int res = fwrite(data, sizeof(tar_t), 1, fd);
     int rv = 0; 

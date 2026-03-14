@@ -186,10 +186,15 @@ void fuzz_typeflag(tar_t* tar) {
 
 void fuzz_size_with_empty_file(tar_t* tar) {
 
-    for(int pos = 0; pos < 11; pos++) {
-        for(int val = '1'; val < '7'; val++) {
-            tar->size[pos] = val;
-            run_test(tar, "", "", 0);
+    strcpy(tar->size, "0000000000");
+    for(int pos = 1; pos < 12; pos++) {
+        for(int val = '1'; val < '8'; val++) {
+            tar->size[11-pos] = val ;
+            printf("Testing size : %s\n", tar->size);
+            char *content = malloc(512);
+            memset(content, 'A', 511);
+            memset(content + 511, '\0', 1);
+            run_test(tar, "", content, 512);
         }
     }
     strcpy(tar->size, "000000000000");
@@ -207,8 +212,8 @@ void fuzz_guid(tar_t* tar) {
 int generate_inputs() {
     
     tar_t candidate = {0};
-    // init_valid_tar(&candidate);
-    // fuzz_size_with_empty_file(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_size_with_empty_file(&candidate);
 
     // init_valid_tar(&candidate);
     // fuzz_time(&candidate);
