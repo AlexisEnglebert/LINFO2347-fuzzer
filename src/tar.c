@@ -38,7 +38,6 @@ int init_valid_tar(tar_t* tar) {
     strcpy(tar->name, "test");
 
     strcpy(tar->version, "00");
-    calculate_checksum(tar);
 
     return 0;
 }
