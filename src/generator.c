@@ -384,6 +384,10 @@ void fuzz_circular_links(tar_t* tar) {
     if (execute_extractor("") == 0) {
         system("cp archive.tar success_circular_link.tar");
     }
+        system("rm -f archive.tar");
+        system("rm -f A");
+        system("rm -f B");
+        system("rm -f self_trap");
 
 }
 
@@ -432,7 +436,12 @@ void fuzz_base256_size(tar_t* tar) {
     tar->uid[0] = 0x80;
     memset(tar->uid + 1, 0xFF, 7);
     run_test(tar, "", "", 0);
+
+    tar->gid[0] = 0x80;
+    memset(tar->gid + 1, 0xFF, 7);
+    run_test(tar, "", "", 0);
 }
+
 
 int generate_inputs() {
     
@@ -497,6 +506,10 @@ int generate_inputs() {
     //bug 3
     // init_valid_tar(&candidate);
     // fuzz_base256_size(&candidate);
+
+    init_valid_tar(&candidate);
+    fuzz_base256_gid(&candidate);
+    
 
     return 0;
 }
