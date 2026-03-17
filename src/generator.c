@@ -440,7 +440,22 @@ void fuzz_base256_size(tar_t* tar) {
     tar->gid[0] = 0x80;
     memset(tar->gid + 1, 0xFF, 7);
     run_test(tar, "", "", 0);
+
+    tar->mtime[0] = 0x80;
+    memset(tar->mtime + 1, 0xFF, 11);
+    run_test(tar, "", "", 0);
 }
+
+void fuzz_path_traversal_prefix_name(tar_t* tar) {
+    init_valid_tar(tar);
+    strcpy(tar->prefix, "../../../");
+    strcpy(tar->name, "etc/passwd");
+    run_test(tar, "", "", 0);
+}
+
+
+
+
 
 
 int generate_inputs() {
@@ -510,6 +525,9 @@ int generate_inputs() {
     // init_valid_tar(&candidate);
     // fuzz_base256_gid(&candidate);
     
+    // init_valid_tar(&candidate);
+    // fuzz_path_traversal_prefix_name(&candidate);
+
 
     return 0;
 }
