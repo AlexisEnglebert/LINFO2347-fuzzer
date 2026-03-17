@@ -163,6 +163,7 @@ void fuzz_time(tar_t* tar) {
 
 
 void fuzz_typeflag(tar_t* tar) {
+    //!!!!!!!!!!!!!!!!!! this is bug 4
     tar->typeflag = '1';
     run_test(tar, "", "", 0);
     exit(0);
@@ -414,6 +415,25 @@ void fuzz_weird_types(tar_t* tar) {
         run_test(tar, "", "", 0);
     }
 }
+
+void fuzz_base256_size(tar_t* tar) {
+    //adding manually the 0x80 prefix to indicate base-256 encoding for size field instead of octal, and then filling the rest with 0xFF to get a huge number
+    // 0x80 prefix = positive base-256
+    tar->size[0] = 0x80;
+    memset(tar->size + 1, 0xFF, 10); // Huge number
+    run_test(tar, "", "", 0);
+
+    // 0xFF prefix = negative (two's complement)
+    memset(tar->size, 0xFF, 11);
+    run_test(tar, "", "", 0);
+
+    // Also try on uid/gid/mtime fields
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! THIS IS BUG3
+    tar->uid[0] = 0x80;
+    memset(tar->uid + 1, 0xFF, 7);
+    run_test(tar, "", "", 0);
+}
+
 int generate_inputs() {
     
     tar_t candidate = {0};
@@ -426,6 +446,7 @@ int generate_inputs() {
     //init_valid_tar(&candidate);
     //fuzz_magic_version(&candidate);
 
+    //bug 4
     // init_valid_tar(&candidate);
     // fuzz_typeflag(&candidate);
     
@@ -472,6 +493,10 @@ int generate_inputs() {
     // fuzz_weird_types(&candidate);
 
     // fuzz_null_archive();
+
+    //bug 3
+    // init_valid_tar(&candidate);
+    // fuzz_base256_size(&candidate);
 
     return 0;
 }
