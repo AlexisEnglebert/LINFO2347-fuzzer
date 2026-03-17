@@ -507,8 +507,8 @@ int generate_inputs() {
     // init_valid_tar(&candidate);
     // fuzz_base256_size(&candidate);
 
-    init_valid_tar(&candidate);
-    fuzz_base256_gid(&candidate);
+    // init_valid_tar(&candidate);
+    // fuzz_base256_gid(&candidate);
     
 
     return 0;
