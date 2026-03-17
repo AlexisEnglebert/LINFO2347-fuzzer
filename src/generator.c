@@ -55,8 +55,8 @@ int execute_extractor(const char* command_prefix) {
             "archive.tar",
             NULL
         };
-        execvp(executable, args);        
-        fprintf(stderr, "Error executing program : %s\n", strerror(errno));
+        execvp(executable, args);  
+        fprintf(stderr, "Error executing program %s: %s\n", executable, strerror(errno));
         return -1;
     } else {
         close(pipefd[1]);
@@ -163,10 +163,10 @@ void fuzz_time(tar_t* tar) {
 
 
 void fuzz_typeflag(tar_t* tar) {
-    //!!!!!!!!!!!!!!!!!! this is bug 4
+    strcpy(tar->linkname, "pouetpouet");
+    
     tar->typeflag = '1';
     run_test(tar, "", "", 0);
-    exit(0);
     tar->typeflag = '2';
     run_test(tar, "", "", 0);
     tar->typeflag = '3';
@@ -189,20 +189,18 @@ void fuzz_typeflag(tar_t* tar) {
 }
 
 void fuzz_size_with_empty_file(tar_t* tar) {
-
-    strcpy(tar->size, "0000000000");
-    for(int pos = 1; pos < 12; pos++) {
+    memset(tar->size, 0, 12);
+    char content[100];
+    memset(content, 'a', 100);
+    for(int pos = 0; pos < 11; pos++) {
         for(int val = '1'; val < '8'; val++) {
-            tar->size[11-pos] = val ;
-            printf("Testing size : %s\n", tar->size);
-            char *content = malloc(512);
-            memset(content, 'A', 511);
-            memset(content + 511, '\0', 1);
-            run_test(tar, "", content, 512);
+            tar->size[pos] = val;
+            run_test(tar, "", content, 100);
         }
     }
-    strcpy(tar->size, "000000000000");
+    memset(tar->size, 0, 12);
 }
+
 
 void fuzz_guid(tar_t* tar) {
     //first gid then uid 
@@ -219,6 +217,7 @@ void fuzz_guid(tar_t* tar) {
         }
     }
 }
+
 void fuzz_links(tar_t* tar) {
     tar->typeflag = '2'; // Symbolink link
     strcpy(tar->name, "link_trap");
@@ -347,9 +346,6 @@ void fuzz_uname_gname(tar_t* tar) {
     run_test(tar, "", "", 0);
 }
 
-
-
-
 void fuzz_circular_links(tar_t* tar) {
     // Cas 1 : Lien vers soi-même direct
     init_valid_tar(tar);
@@ -390,7 +386,6 @@ void fuzz_circular_links(tar_t* tar) {
         system("rm -f self_trap");
 
 }
-
 
 void fuzz_extreme_octal_size(tar_t* tar) {
     init_valid_tar(tar);
@@ -453,16 +448,12 @@ void fuzz_path_traversal_prefix_name(tar_t* tar) {
     run_test(tar, "", "", 0);
 }
 
-
-
-
-
-
 int generate_inputs() {
     
     tar_t candidate = {0};
-    // init_valid_tar(&candidate);
-    // fuzz_size_with_empty_file(&candidate);
+    // bug 5
+    init_valid_tar(&candidate);
+    fuzz_size_with_empty_file(&candidate);
 
     // init_valid_tar(&candidate);
     // fuzz_time(&candidate);
@@ -471,8 +462,8 @@ int generate_inputs() {
     //fuzz_magic_version(&candidate);
 
     //bug 4
-    // init_valid_tar(&candidate);
-    // fuzz_typeflag(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_typeflag(&candidate);
     
     // init_valid_tar(&candidate);
     // fuzz_name(&candidate);
@@ -519,14 +510,11 @@ int generate_inputs() {
     // fuzz_null_archive();
 
     //bug 3
-    // init_valid_tar(&candidate);
-    // fuzz_base256_size(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_base256_size(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_base256_gid(&candidate);
-    
-    // init_valid_tar(&candidate);
-    // fuzz_path_traversal_prefix_name(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_path_traversal_prefix_name(&candidate);
 
 
     return 0;
