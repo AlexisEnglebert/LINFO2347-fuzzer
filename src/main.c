@@ -16,11 +16,7 @@ int main(int argc, char* argv[]) {
         help();
         return -1;
     }
-
-    command = calloc(51, sizeof(*command));
-    
-    strncpy(command, argv[1], 25);
-    command[26] = '\0';
+    command = strdup(argv[1]);
     
     int ret = generate_inputs();
     
