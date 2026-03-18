@@ -17,7 +17,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     command = strdup(argv[1]);
-    
     int ret = generate_inputs();
     
     return ret;

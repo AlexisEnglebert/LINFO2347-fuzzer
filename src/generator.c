@@ -20,6 +20,7 @@ int run_test(tar_t* tar, const char* command_prefix, const char* content, size_t
         save_success_tar(tar, content, data_size);
     }
     
+    remove("test");
     return 0;
 }
 
@@ -282,13 +283,12 @@ void fuzz_chains(const char* command_prefix) {
     init_valid_tar(&h1);
     init_valid_tar(&h2);
 
-    // Cas 1 : Deux fichiers valides à la suite
     FILE* fd = fopen("archive.tar", "wb");
     strcpy(h1.name, "file1.txt");
-    strcpy(h1.size, "00000000010"); // 8 octets en octal
+    strcpy(h1.size, "00000000010");
     calculate_checksum(&h1);
     fwrite(&h1, sizeof(tar_t), 1, fd);
-    fwrite("12345678", 1, 512, fd); // Data + Padding
+    fwrite("12345678", 1, 512, fd);
 
     strcpy(h2.name, "file2.txt");
     calculate_checksum(&h2);
@@ -299,12 +299,11 @@ void fuzz_chains(const char* command_prefix) {
     fclose(fd);
     execute_extractor(command_prefix);
 
-    // Cas 2 : Header fantôme (Header -> Header sans données)
     fd = fopen("archive.tar", "wb");
-    strcpy(h1.size, "00000000100"); // Prétend avoir des données
+    strcpy(h1.size, "00000000100");
     calculate_checksum(&h1);
     fwrite(&h1, sizeof(tar_t), 1, fd); 
-    fwrite(&h2, sizeof(tar_t), 1, fd); // On colle le 2ème header direct !
+    fwrite(&h2, sizeof(tar_t), 1, fd);
     fclose(fd);
     execute_extractor(command_prefix);
 
@@ -316,21 +315,15 @@ void fuzz_chains(const char* command_prefix) {
 
 
 void fuzz_extreme_sizes(tar_t* tar) {
-    // 1. Très grand nombre octal (proche de la limite max)
     strcpy(tar->size, "77777777777"); 
     run_test(tar, "", "", 0);
 
-    // 2. Nombre négatif en octal (certains parseurs détestent ça)
     strcpy(tar->size, "-0000000001");
     run_test(tar, "", "", 0);
 
-    // 3. Size avec des lettres (force l'erreur de parsing)
     strcpy(tar->size, "00000000A10");
     run_test(tar, "", "", 0);
 }
-
-
-
 
 void fuzz_null_archive() {
     // Test 1: Fichier vide
@@ -341,21 +334,19 @@ void fuzz_null_archive() {
 
 void fuzz_uname_gname(tar_t* tar) {
     init_valid_tar(tar);
-    memset(tar->uname, 'B', 32); // Pas de \0 final
-    memset(tar->gname, 'C', 32); // Pas de \0 final
+
+    memset(tar->uname, 'B', 31); // Pas de \0 final
+    memset(tar->gname, 'C', 31); // Pas de \0 final
     run_test(tar, "", "", 0);
 }
 
 void fuzz_circular_links(tar_t* tar) {
-    // Cas 1 : Lien vers soi-même direct
     init_valid_tar(tar);
     tar->typeflag = '2'; // Symlink
     strcpy(tar->name, "self_trap");
     strcpy(tar->linkname, "self_trap");
     run_test(tar, "", "", 0);
 
-    // Cas 2 : cycle (A -> B et B -> A)
-    // plusieurs fichiers pour faire le cycle
     FILE* fd = fopen("archive.tar", "wb");
     tar_t h1, h2;
     init_valid_tar(&h1);
@@ -380,10 +371,10 @@ void fuzz_circular_links(tar_t* tar) {
     if (execute_extractor("") == 0) {
         system("cp archive.tar success_circular_link.tar");
     }
-        system("rm -f archive.tar");
-        system("rm -f A");
-        system("rm -f B");
-        system("rm -f self_trap");
+    system("rm -f archive.tar");
+    system("rm -f A");
+    system("rm -f B");
+    system("rm -f self_trap");
 
 }
 
@@ -404,6 +395,8 @@ void fuzz_metadata_overflow(tar_t* tar) {
     memset(tar->uname, 'X', 32); // Rempli sans \0 
     memset(tar->gname, 'Y', 32); // Rempli sans \0 
     run_test(tar, "", "", 0);
+
+    //TODO test with edge case (invalid uname or gname)
 }
 
 void fuzz_weird_types(tar_t* tar) {
@@ -439,6 +432,11 @@ void fuzz_base256_size(tar_t* tar) {
     tar->mtime[0] = 0x80;
     memset(tar->mtime + 1, 0xFF, 11);
     run_test(tar, "", "", 0);
+
+    tar->uname[0] = 0x80;
+    tar->gname[0] = 0x80;
+    memset(tar->uname+1, 0xFF, 30); // Rempli sans \0 
+    memset(tar->gname+1, 0XFF, 30); // Rempli sans \0 
 }
 
 void fuzz_path_traversal_prefix_name(tar_t* tar) {
@@ -448,6 +446,47 @@ void fuzz_path_traversal_prefix_name(tar_t* tar) {
     run_test(tar, "", "", 0);
 }
 
+void fuzz_short_name(tar_t* tar) {
+    strcpy(tar->name,"A");
+    char content[2000];
+    memset(content, 'B', 100);
+    run_test(tar, "", content, 2000);
+    remove("A");
+}
+
+void fuzz_same_file_in_tar(tar_t* tar) {
+    tar_t h1 = *tar;
+    tar_t h2 = *tar;
+
+    strcpy(h1.name, "test");
+    strcpy(h2.name, "test");
+    h1.typeflag = '0';
+    h2.typeflag = '0';
+    memset(h1.linkname, 0, sizeof(h1.linkname));
+    memset(h2.linkname, 0, sizeof(h2.linkname));
+
+    const unsigned int size1 = 1;
+    const unsigned int size2 = 1;
+    snprintf(h1.size, sizeof(h1.size), "%011o", size1);
+    snprintf(h2.size, sizeof(h2.size), "%011o", size2);
+
+    calculate_checksum(&h1);
+    calculate_checksum(&h2);
+
+   
+    char* content = calloc(1, sizeof(*content)+sizeof(tar_t)+512+512);
+    content[0] = 'A';
+    memcpy(content+512, (void*)&h2, sizeof(h2));
+    content[512+sizeof(h2)] = 'A';
+    
+    run_test(&h1, "", content, sizeof(*content)+sizeof(tar_t)+512+512);
+
+    free(content);
+    //remove("test");
+}
+
+
+
 int generate_inputs() {
     
     tar_t candidate = {0};
@@ -455,11 +494,11 @@ int generate_inputs() {
     init_valid_tar(&candidate);
     fuzz_size_with_empty_file(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_time(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_time(&candidate);
      
-    //init_valid_tar(&candidate);
-    //fuzz_magic_version(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_magic_version(&candidate);
 
     //bug 4
     init_valid_tar(&candidate);
@@ -468,55 +507,54 @@ int generate_inputs() {
     // init_valid_tar(&candidate);
     // fuzz_name(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_mode(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_same_file_in_tar(&candidate);
+    /*init_valid_tar(&candidate);
+    fuzz_mode(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_guid(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_guid(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_checksum(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_checksum(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_links(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_links(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_chains("");
+    init_valid_tar(&candidate);
+    fuzz_chains("");
 
-    // init_valid_tar(&candidate);
-    // fuzz_extreme_sizes(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_extreme_sizes(&candidate);
 
+    init_valid_tar(&candidate);
+    fuzz_circular_links(&candidate);
 
-    // fuzz_null_archive();
+    */
+    /*init_valid_tar(&candidate);
+    fuzz_uname_gname(&candidate);*/
+/*
 
-    // init_valid_tar(&candidate);
-    // fuzz_circular_links(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_extreme_octal_size(&candidate);
 
+    init_valid_tar(&candidate);
+    fuzz_metadata_overflow(&candidate);
 
-    // init_valid_tar(&candidate);
-    // fuzz_uname_gname(&candidate);
+    init_valid_tar(&candidate);
+    fuzz_weird_types(&candidate);
 
-
-    // init_valid_tar(&candidate);
-    // fuzz_extreme_octal_size(&candidate);
-
-    // init_valid_tar(&candidate);
-    // fuzz_metadata_overflow(&candidate);
-
-
-    // init_valid_tar(&candidate);
-    // fuzz_weird_types(&candidate);
-
-    // fuzz_null_archive();
+    fuzz_null_archive();
 
     //bug 3
+
+    init_valid_tar(&candidate);
+    fuzz_path_traversal_prefix_name(&candidate);
+*/
     init_valid_tar(&candidate);
     fuzz_base256_size(&candidate);
 
     init_valid_tar(&candidate);
-    fuzz_path_traversal_prefix_name(&candidate);
-
-
+    fuzz_short_name(&candidate);
     return 0;
 }
-

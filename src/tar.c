@@ -2,8 +2,9 @@
 #include <errno.h>
 #include <dirent.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/stat.h>
-
+#include <sys/types.h>
 
 /**
  * Computes the checksum for a tar header and encode it on the header
@@ -38,6 +39,12 @@ int init_valid_tar(tar_t* tar) {
     strcpy(tar->name, "test");
 
     strcpy(tar->version, "00");
+
+    uid_t uid = getuid();
+    gid_t gid = getgid();
+
+    snprintf(tar->uid, 8, "%u", uid);
+    snprintf(tar->gid, 8, "%u", gid);
 
     return 0;
 }
