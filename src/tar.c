@@ -66,16 +66,7 @@ int write_tar(tar_t* data, const char* filename, const char *content, size_t dat
     }
     
     fwrite(content, sizeof(char), data_size, fd);
-
-     /* pad file data to 512-byte boundary */
-    /*if (data_size > 0) {
-        size_t pad = (512 - (data_size % 512)) % 512;
-        if (pad) {
-            char pad_buf[512] = {0};
-            fwrite(pad_buf, 1, pad, fd);
-        }
-    }*/
-
+    
     char end_block[1024];
     memset(&end_block, 0, 1024);
     fwrite(&end_block, sizeof(char), 1024, fd);
