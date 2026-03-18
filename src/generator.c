@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
-
 #include "generator.h"
 #include "tar.h"
 
@@ -25,7 +24,6 @@ int run_test(tar_t* tar, const char* command_prefix, const char* content, size_t
 
 int execute_extractor(const char* command_prefix) {
     char executable[256];
-    
     snprintf(executable, sizeof(executable), "%s%s", command_prefix, command);
 
     int pipefd[2];
@@ -248,6 +246,12 @@ void fuzz_checksum(tar_t *tar) {
     tar->chksum[7] = ' ';
     run_test(tar, "", "", 0, 0);
 
+    strcpy(tar->chksum, "AA\0BB\0");
+    run_test(tar, "", "", 0, 0);
+
+    strcpy(tar->chksum, "AA\0BB");
+    run_test(tar, "", "", 0, 0);
+
     memcpy(tar->chksum, original, 8);
     for (int i = 0; i < 7; i++) {
         char saved = tar->chksum[i];
@@ -343,10 +347,51 @@ void fuzz_incomplete_archive() {
 void fuzz_uname_gname(tar_t* tar) {
     init_valid_tar(tar);
 
-    memset(tar->uname, 'B', 31); // Pas de \0 final
-    memset(tar->gname, 'C', 31); // Pas de \0 final
+    memset(tar->uname, 'A', 32);
+    memset(tar->gname, 'B', 32);
     run_test(tar, "", "", 0, 1);
+
+    init_valid_tar(tar);
+    memset(tar->uname, 0, 32);
+    memset(tar->gname, 0, 32);
+    run_test(tar, "", "", 0, 1);
+
+    init_valid_tar(tar);
+    memcpy(tar->uname, "A\0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 32);
+    memcpy(tar->gname, "B\0BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", 32);
+    run_test(tar, "", "", 0, 1);
+
+    init_valid_tar(tar);
+    memset(tar->uname, 0xFF, 32);
+    memset(tar->gname, 0x80, 32);
+    run_test(tar, "", "", 0, 1);
+
+    init_valid_tar(tar);
+    memset(tar->uname, ' ', 32);
+    memset(tar->gname, ' ', 32);
+    run_test(tar, "", "", 0, 1);
+
+    for (int pos = 0; pos < 32; pos++) {
+        init_valid_tar(tar);
+        memset(tar->uname, 'A', 31);
+        memset(tar->gname, 'B', 31);
+        tar->uname[31] = '\0';
+        tar->gname[31] = '\0';
+
+        tar->uname[pos] = '/';
+        run_test(tar, "", "", 0, 1);
+
+        init_valid_tar(tar);
+        memset(tar->uname, 'A', 31);
+        memset(tar->gname, 'B', 31);
+        tar->uname[31] = '\0';
+        tar->gname[31] = '\0';
+
+        tar->gname[pos] = 0xFF;
+        run_test(tar, "", "", 0, 1);
+    }
 }
+
 
 void fuzz_circular_links(tar_t* tar) {
     init_valid_tar(tar);
@@ -454,6 +499,57 @@ void fuzz_path_traversal_prefix_name(tar_t* tar) {
     run_test(tar, "", "", 0, 1);
 }
 
+void fuzz_hardlinks(tar_t* tar) {
+    init_valid_tar(tar);
+    tar->typeflag = '1';
+    strcpy(tar->name, "test");
+    strcpy(tar->linkname, "test");
+    run_test(tar, "", "", 0, 1);
+
+    init_valid_tar(tar);
+    tar->typeflag = '1';
+    strcpy(tar->name, "test");
+    strcpy(tar->linkname, "/tmp/target");
+    run_test(tar, "", "", 0, 1);
+
+    init_valid_tar(tar);
+    tar->typeflag = '1';
+    strcpy(tar->name, "test");
+    strcpy(tar->linkname, "../../secret_de_victor.txt");
+    run_test(tar, "", "", 0, 1);
+
+    tar_t h1 = *tar;
+    tar_t h2 = *tar;
+
+    memset(&h1, 0, sizeof(h1));
+    memset(&h2, 0, sizeof(h2));
+    init_valid_tar(&h1);
+    init_valid_tar(&h2);
+
+    h1.typeflag = '1';
+    strcpy(h1.name, "test");
+    strcpy(h1.linkname, "wesh");
+
+    h2.typeflag = '0';
+    strcpy(h2.name, "wesh");
+    memset(h2.linkname, 0, sizeof(h2.linkname));
+
+    snprintf(h2.size, sizeof(h2.size), "%011o", 1);
+
+    calculate_checksum(&h1);
+    calculate_checksum(&h2);
+
+    char* content = calloc(1, sizeof(h2) + 512 + 512);
+    content[0] = 'A';
+    memcpy(content + 512, &h2, sizeof(h2));
+    content[512 + sizeof(h2)] = 'B';
+
+    run_test(&h1, "", content, sizeof(h2) + 512 + 512, 0);
+
+    free(content);
+}
+
+
 void fuzz_short_name(tar_t* tar) {
     strcpy(tar->name,"A");
     char content[2000];
@@ -493,6 +589,61 @@ void fuzz_same_file_in_tar(tar_t* tar) {
     free(content);
 }
 
+void fuzz_ten_entries_archive() {
+    tar_t headers[10];
+    memset(headers, 0, sizeof(headers));
+
+    for (int i = 0; i < 10; i++) {
+        init_valid_tar(&headers[i]);
+        headers[i].typeflag = '0';
+        snprintf(headers[i].name, sizeof(headers[i].name), "f%d", i);
+        memset(headers[i].linkname, 0, sizeof(headers[i].linkname));
+        snprintf(headers[i].size, sizeof(headers[i].size), "%011o", 1);
+    }
+    headers[9].typeflag = '1';
+    strcpy(headers[9].name, "BOOOOOOOOOOOM");
+    strcpy(headers[9].linkname, "f0");
+    memset(headers[9].size, 0, sizeof(headers[9].size));
+
+    for (int i = 0; i < 10; i++) {
+        calculate_checksum(&headers[i]);
+    }
+
+    int content_size = 0;
+    content_size = 512 + 9 * (sizeof(tar_t) + 512);
+
+    char *content = calloc(1, content_size);
+    if (content == NULL) {
+        return;
+    }
+
+    int offset = 0;
+
+    content[offset] = 'A';
+    offset += 512;
+
+    for (int i = 1; i < 10; i++) {
+        memcpy(content + offset, &headers[i], sizeof(tar_t));
+        offset += sizeof(tar_t);
+        if (headers[i].typeflag == '0') {
+            content[offset] = 'A' + (i % 26);
+        }
+        offset += 512;
+    }
+
+    run_test(&headers[0], "", content, content_size, 0);
+
+    free(content);
+
+    for (int i = 0; i < 9; i++) {
+        char filename[16];
+        snprintf(filename, sizeof(filename), "f%d", i);
+        remove(filename);
+    }
+    remove("BOOOOOOOOOOOM");
+}
+
+
 void fuzz_version(tar_t* tar) {
     for(int i = '0';  i <= '9'; i++) {
         for(int j = '0'; j <= '9'; j++) {
@@ -505,6 +656,12 @@ void fuzz_version(tar_t* tar) {
 
 int generate_inputs() {
     tar_t candidate = {0};
+
+    init_valid_tar(&candidate);
+    fuzz_ten_entries_archive();
+
+    init_valid_tar(&candidate);
+    fuzz_hardlinks(&candidate);
 
     init_valid_tar(&candidate);
     fuzz_version(&candidate);
@@ -570,7 +727,6 @@ int generate_inputs() {
 
     init_valid_tar(&candidate);
     fuzz_path_traversal_prefix_name(&candidate);
-
 
     init_valid_tar(&candidate);
     fuzz_short_name(&candidate);
