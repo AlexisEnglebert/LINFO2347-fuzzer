@@ -37,8 +37,8 @@ int init_valid_tar(tar_t* tar) {
     
     strcpy(tar->magic, "ustar");
     strcpy(tar->name, "test");
-
     strcpy(tar->version, "00");
+    strcpy(tar->mode, "0000755");
 
     uid_t uid = getuid();
     gid_t gid = getgid();
@@ -94,5 +94,6 @@ int save_success_tar(tar_t* tar, const char* content, size_t data_size) {
     sprintf(filename, "%s%d%s", "success_", success_cnt, "_archive.tar");
     success_cnt++;
     write_tar(tar, filename, content, data_size);
+    exit(0);
     return 0;
 }

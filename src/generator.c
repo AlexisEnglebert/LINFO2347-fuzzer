@@ -20,7 +20,7 @@ int run_test(tar_t* tar, const char* command_prefix, const char* content, size_t
         save_success_tar(tar, content, data_size);
     }
     
-    remove("test");
+    //remove("test");
     return 0;
 }
 
@@ -150,6 +150,8 @@ int fuzz_mode(tar_t* a) {
             run_test(a, "", "", 0);
         }
     }
+
+
     return 0;
 }
 
@@ -205,14 +207,15 @@ void fuzz_size_with_empty_file(tar_t* tar) {
 
 void fuzz_guid(tar_t* tar) {
     //first gid then uid 
-    for(int i = 0; i < 7; i++) {
-        for(int val = '1'; val <= '7'; val++) {
+    for(int i = 0; i < 1; i++) {
+        for(int val = '1'; val <= '9'; val++) {
             tar->gid[i] = val;
             run_test(tar, "", "", 0);
         }
     }
+
     for(int i = 0; i < 7; i++) {
-        for(int val = '1'; val <= '7'; val++) {
+        for(int val = '1'; val <= '9'; val++) {
             tar->uid[i] = val;
             run_test(tar, "", "", 0);
         }
@@ -269,13 +272,15 @@ void fuzz_checksum(tar_t *tar) {
         tar->chksum[i] = saved;
     }
 }
-void fuzz_magic_version(tar_t* tar) {
+void fuzz_magic(tar_t* tar) {
     const char* magics[] = {"ustar ", "ustar\0", "      ", "\xff\xff\xff\xff\xff"};
     for(int i=0; i<4; i++) {
         memcpy(tar->magic, magics[i], 6);
         run_test(tar, "", "", 0);
     }
 }
+
+
 
 
 void fuzz_chains(const char* command_prefix) {
@@ -485,35 +490,54 @@ void fuzz_same_file_in_tar(tar_t* tar) {
     //remove("test");
 }
 
-
+void fuzz_version(tar_t* tar) {
+    for(int i = '0';  i <= '9'; i++) {
+        for(int j = '0'; j <= '9'; j++) {
+            tar->version[0] = i;
+            tar->version[1] = j;
+            run_test(tar, "", "" ,0);
+        }
+    }
+}
 
 int generate_inputs() {
     
     tar_t candidate = {0};
-    // bug 5
+
+    init_valid_tar(&candidate);
+    fuzz_version(&candidate);
+    
+    init_valid_tar(&candidate);
+    fuzz_guid(&candidate);
+    
+    init_valid_tar(&candidate);
+    fuzz_typeflag(&candidate);
+
     init_valid_tar(&candidate);
     fuzz_size_with_empty_file(&candidate);
 
+    init_valid_tar(&candidate);
+    fuzz_same_file_in_tar(&candidate);
+
+    init_valid_tar(&candidate);
+    fuzz_base256_size(&candidate);
+
+    /*
     init_valid_tar(&candidate);
     fuzz_time(&candidate);
      
     init_valid_tar(&candidate);
     fuzz_magic_version(&candidate);
 
-    //bug 4
-    init_valid_tar(&candidate);
-    fuzz_typeflag(&candidate);
+    */
     
     // init_valid_tar(&candidate);
     // fuzz_name(&candidate);
 
-    init_valid_tar(&candidate);
-    fuzz_same_file_in_tar(&candidate);
+   
     /*init_valid_tar(&candidate);
     fuzz_mode(&candidate);
 
-    init_valid_tar(&candidate);
-    fuzz_guid(&candidate);
 
     init_valid_tar(&candidate);
     fuzz_checksum(&candidate);
@@ -551,8 +575,6 @@ int generate_inputs() {
     init_valid_tar(&candidate);
     fuzz_path_traversal_prefix_name(&candidate);
 */
-    init_valid_tar(&candidate);
-    fuzz_base256_size(&candidate);
 
     init_valid_tar(&candidate);
     fuzz_short_name(&candidate);
