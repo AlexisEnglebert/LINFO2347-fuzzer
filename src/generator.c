@@ -549,7 +549,6 @@ void fuzz_hardlinks(tar_t* tar) {
     free(content);
 }
 
-
 void fuzz_short_name(tar_t* tar) {
     strcpy(tar->name,"A");
     char content[2000];
@@ -578,7 +577,6 @@ void fuzz_same_file_in_tar(tar_t* tar) {
     calculate_checksum(&h1);
     calculate_checksum(&h2);
 
-   
     char* content = calloc(1, sizeof(*content)+sizeof(tar_t)+512+512);
     content[0] = 'A';
     memcpy(content+512, (void*)&h2, sizeof(h2));
@@ -587,6 +585,99 @@ void fuzz_same_file_in_tar(tar_t* tar) {
     run_test(&h1, "", content, sizeof(*content)+sizeof(tar_t)+512+512, 1);
 
     free(content);
+}
+
+void fuzz_size_content_padding_mismatch(tar_t* tar) {
+    tar_t h1 = *tar;
+    tar_t h2 = *tar;
+    char second_content[512] = {0};
+    char oversized_content[1000];
+    char garbage_block[512];
+    char *content;
+    size_t offset;
+    size_t content_size;
+
+    memset(oversized_content, 'A', sizeof(oversized_content));
+    memset(garbage_block, 'G', sizeof(garbage_block));
+    second_content[0] = 'B';
+
+    strcpy(h1.name, "first");
+    h1.typeflag = '0';
+    memset(h1.linkname, 0, sizeof(h1.linkname));
+    snprintf(h1.size, sizeof(h1.size), "%011o", 1);
+    calculate_checksum(&h1);
+
+    strcpy(h2.name, "second");
+    h2.typeflag = '0';
+    memset(h2.linkname, 0, sizeof(h2.linkname));
+    snprintf(h2.size, sizeof(h2.size), "%011o", 1);
+    calculate_checksum(&h2);
+
+    content_size = sizeof(h2) + sizeof(second_content);
+    content = calloc(1, content_size);
+    offset = 0;
+    memcpy(content + offset, &h2, sizeof(h2));
+    offset += sizeof(h2);
+    memcpy(content + offset, second_content, sizeof(second_content));
+    run_test(&h1, "", content, content_size, 0);
+    remove("first");
+    remove("second");
+    free(content);
+
+    content_size = sizeof(oversized_content) + sizeof(h2) + sizeof(second_content);
+    content = calloc(1, content_size);
+    offset = 0;
+    memcpy(content + offset, oversized_content, sizeof(oversized_content));
+    offset += sizeof(oversized_content);
+    memcpy(content + offset, &h2, sizeof(h2));
+    offset += sizeof(h2);
+    memcpy(content + offset, second_content, sizeof(second_content));
+    run_test(&h1, "", content, content_size, 0);
+    remove("first");
+    remove("second");
+    free(content);
+
+    content_size = 1 + sizeof(h2) + sizeof(second_content);
+    content = calloc(1, content_size);
+    offset = 0;
+    content[offset++] = 'A';
+    memcpy(content + offset, &h2, sizeof(h2));
+    offset += sizeof(h2);
+    memcpy(content + offset, second_content, sizeof(second_content));
+    run_test(&h1, "", content, content_size, 0);
+    remove("first");
+    remove("second");
+    free(content);
+
+    content_size = 1 + 511 + 512 + sizeof(h2) + sizeof(second_content);
+    content = calloc(1, content_size);
+    offset = 0;
+    content[offset++] = 'A';
+    offset += 511;
+    offset += 512;
+    memcpy(content + offset, &h2, sizeof(h2));
+    offset += sizeof(h2);
+    memcpy(content + offset, second_content, sizeof(second_content));
+    run_test(&h1, "", content, content_size, 0);
+    remove("first");
+    remove("second");
+    free(content);
+
+    content_size = 1 + 511 + sizeof(garbage_block) + sizeof(h2) + sizeof(second_content);
+    content = calloc(1, content_size);
+    offset = 0;
+    content[offset++] = 'A';
+    offset += 511;
+    memcpy(content + offset, garbage_block, sizeof(garbage_block));
+    offset += sizeof(garbage_block);
+    memcpy(content + offset, &h2, sizeof(h2));
+    offset += sizeof(h2);
+    memcpy(content + offset, second_content, sizeof(second_content));
+    run_test(&h1, "", content, content_size, 0);
+    remove("first");
+    remove("second");
+    free(content);
+    
 }
 
 void fuzz_ten_entries_archive() {
@@ -643,7 +734,6 @@ void fuzz_ten_entries_archive() {
     remove("BOOOOOOOOOOOM");
 }
 
-
 void fuzz_version(tar_t* tar) {
     for(int i = '0';  i <= '9'; i++) {
         for(int j = '0'; j <= '9'; j++) {
@@ -656,6 +746,7 @@ void fuzz_version(tar_t* tar) {
 
 int generate_inputs() {
     tar_t candidate = {0};
+
 
     init_valid_tar(&candidate);
     fuzz_ten_entries_archive();
@@ -674,6 +765,9 @@ int generate_inputs() {
 
     init_valid_tar(&candidate);
     fuzz_size_with_empty_file(&candidate);
+
+    init_valid_tar(&candidate);
+    fuzz_size_content_padding_mismatch(&candidate);
 
     init_valid_tar(&candidate);
     fuzz_same_file_in_tar(&candidate);
